@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 interface BentoCardProps {
     children: React.ReactNode;
@@ -9,6 +8,7 @@ interface BentoCardProps {
     colSpan?: 1 | 2 | 3 | 4; // Responsive column spanning
     rowSpan?: 1 | 2 | 3; // Responsive row spanning
     id?: string;
+    revealAnimation?: 'fade-up' | 'fade-left' | 'fade-right' | 'fade-in' | 'none';
 }
 
 const BentoCard: React.FC<BentoCardProps> = ({
@@ -18,7 +18,8 @@ const BentoCard: React.FC<BentoCardProps> = ({
     subTitle,
     colSpan = 1,
     rowSpan = 1,
-    id
+    id,
+    revealAnimation = 'fade-up'
 }) => {
     // Map span props to tailwind classes — responsive: mobile (1 col), md (2 cols), lg (4 cols)
     const colSpanClass = {
@@ -34,16 +35,14 @@ const BentoCard: React.FC<BentoCardProps> = ({
         3: 'md:row-span-3'
     }[rowSpan];
 
-    const itemVariants = {
-        hidden: { opacity: 0, y: 30, scale: 0.95 },
-        show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 50, damping: 20 } }
-    };
+    const revealClasses = revealAnimation !== 'none'
+        ? `reveal-on-scroll reveal-${revealAnimation}`
+        : '';
 
     return (
-        <motion.div
+        <div
             id={id}
-            variants={itemVariants}
-            className={`relative group overflow-hidden bg-gray-900/40 backdrop-blur-md border border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-all duration-500 hover:border-white/10 hover:shadow-2xl hover:shadow-cyan-900/10 active:border-white/10 active:shadow-lg ${colSpanClass} ${rowSpanClass} ${className} flex flex-col ${id ? 'scroll-mt-20 sm:scroll-mt-28' : ''}`}
+            className={`relative group overflow-hidden bg-gray-900/40 backdrop-blur-md border border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-all duration-500 hover:border-white/10 hover:shadow-2xl hover:shadow-cyan-900/10 active:border-white/10 active:shadow-lg ${colSpanClass} ${rowSpanClass} ${revealClasses} ${className} flex flex-col ${id ? 'scroll-mt-20 sm:scroll-mt-28' : ''}`}
         >
             {/* Subtle Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -60,8 +59,9 @@ const BentoCard: React.FC<BentoCardProps> = ({
                     {children}
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 };
 
 export default BentoCard;
+

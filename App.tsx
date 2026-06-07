@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import emailjs from '@emailjs/browser';
-import { motion } from 'framer-motion';
 import { PhoneIcon, MailIcon, LocationIcon, CalendarIcon, BriefcaseIcon, GraduationCapIcon, CodeIcon, CertificateIcon, ProjectIcon, LanguageIcon, UserIcon, SendIcon, HtmlIcon, CssIcon, PythonIcon, OfficeIcon, DownloadIcon, WhatsappIcon, LinkedInIcon, GithubIcon, ExternalLinkIcon } from './components/Icons';
 import TimelineItem from './components/TimelineItem';
 import SkillBadge from './components/SkillBadge';
@@ -210,16 +209,74 @@ const App: React.FC = () => {
     }
   };
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3
-      }
+  // Intersection Observer for scroll-triggered animations
+  useEffect(() => {
+    if (showWelcome) return;
+
+    // Check for accessibility: reduced motion preferences
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      // Immediately reveal all elements
+      const elements = document.querySelectorAll('.reveal-on-scroll');
+      elements.forEach(el => el.classList.add('revealed'));
+      return;
     }
-  };
+
+    const observer = new IntersectionObserver((entries, obs) => {
+      // Group elements that intersect in the exact same frame for stagger effects
+      const intersectingEntries = entries.filter(entry => entry.isIntersecting);
+
+      if (intersectingEntries.length > 0) {
+        intersectingEntries.forEach((entry, index) => {
+          const target = entry.target as HTMLElement;
+
+          // If the element is a stagger container, animate its children in sequence
+          if (target.classList.contains('stagger-container')) {
+            const children = target.querySelectorAll('.reveal-on-scroll');
+            children.forEach((child, childIdx) => {
+              const childEl = child as HTMLElement;
+              // Add a stagger delay (e.g. 100ms per child)
+              childEl.style.transitionDelay = `${childIdx * 100}ms`;
+              childEl.classList.add('revealed');
+            });
+          } else {
+            // Apply a minor stagger delay if multiple separate elements enter viewport at the same time
+            if (!target.style.transitionDelay && !target.closest('.stagger-container')) {
+              target.style.transitionDelay = `${index * 100}ms`;
+            }
+            target.classList.add('revealed');
+          }
+
+          // Unobserve the element so it only triggers once
+          obs.unobserve(target);
+        });
+      }
+    }, {
+      threshold: 0.08, // Trigger when 8% of the element is visible
+      rootMargin: '0px 0px -50px 0px' // offset so it triggers slightly before entering view
+    });
+
+    // We want to observe individual scroll-reveal elements
+    // Note: We skip elements that are inside a stagger-container because the container handles them
+    const revealElements = document.querySelectorAll('.reveal-on-scroll');
+    const staggerContainers = document.querySelectorAll('.stagger-container');
+
+    revealElements.forEach(el => {
+      // If it's inside a stagger-container, don't observe it directly
+      if (!el.closest('.stagger-container')) {
+        observer.observe(el);
+      }
+    });
+
+    staggerContainers.forEach(containerEl => {
+      observer.observe(containerEl);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [showWelcome]);
+
 
   return (
     <div className="bg-slate-900 min-h-screen font-sans selection:bg-cyan-500/30 text-slate-200 pb-4 sm:pb-20 overflow-x-hidden">
@@ -244,15 +301,12 @@ const App: React.FC = () => {
           </div>
 
           <div className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-8 sm:pb-12 relative z-10 max-w-7xl">
-            <motion.div
+            <div
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 auto-rows-[minmax(120px,auto)] sm:auto-rows-[minmax(140px,auto)] md:auto-rows-[minmax(180px,auto)]"
-              variants={container}
-              initial="hidden"
-              animate="show"
             >
 
               {/* 1. HERO PROFILE (Col 2, Row 2) */}
-              <BentoCard colSpan={3} rowSpan={2} className="relative !p-0 overflow-hidden scroll-mt-28" id="home">
+              <BentoCard colSpan={3} rowSpan={2} className="relative !p-0 overflow-hidden scroll-mt-28" id="home" revealAnimation="fade-up">
                 <div className="absolute inset-0 z-0">
                   <img src={techBg} alt="Tech Background" className="w-full h-full object-cover opacity-20" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
@@ -289,7 +343,7 @@ const App: React.FC = () => {
 
 
               {/* 2. 3D WORKSPACE (Col 2, Row 2) */}
-              <BentoCard colSpan={1} rowSpan={2} title="Workspace" id="workspace" className="!p-0 relative overflow-hidden group min-h-[240px] sm:min-h-[280px] md:min-h-[320px]">
+              <BentoCard colSpan={1} rowSpan={2} title="Workspace" id="workspace" className="!p-0 relative overflow-hidden group min-h-[240px] sm:min-h-[280px] md:min-h-[320px]" revealAnimation="fade-up">
 
                 <div className="absolute inset-0">
                   <ThreeDWorkspace />
@@ -298,16 +352,16 @@ const App: React.FC = () => {
               </BentoCard>
 
               {/* 3. ABOUT ME (Col 2, Row 1) */}
-              <BentoCard colSpan={2} title="About Me" id="about">
+              <BentoCard colSpan={2} title="About Me" id="about" revealAnimation="fade-left">
                 <p className="text-slate-400 text-sm leading-relaxed">
                   {portfolioData.summary}
                 </p>
               </BentoCard>
 
               {/* 4. SOCIAL & LOCATION (Col 2 - Split) */}
-              <div className="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 stagger-container">
                 {/* Socials */}
-                <BentoCard colSpan={1} title="Connect" className="flex flex-col justify-center !mb-0">
+                <BentoCard colSpan={1} title="Connect" className="flex flex-col justify-center !mb-0" revealAnimation="fade-up">
                   <div className="flex gap-4 justify-center items-center h-full">
                     {portfolioData.socials.map(social => (
                       <a key={social.name} href={social.url} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-800/50 rounded-xl hover:bg-cyan-900/30 border border-slate-700/50 hover:border-cyan-500/30 transition-all group/icon">
@@ -320,7 +374,7 @@ const App: React.FC = () => {
                 </BentoCard>
 
                 {/* Madurai Map */}
-                <BentoCard colSpan={1} className="!p-0 relative overflow-hidden bg-black flex items-center justify-center !mb-0 group">
+                <BentoCard colSpan={1} className="!p-0 relative overflow-hidden bg-black flex items-center justify-center !mb-0 group" revealAnimation="fade-up">
                   <a href="https://www.google.com/maps/place/Madurai,+Tamil+Nadu/@9.9252,78.1198,12z" target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-20 cursor-pointer" title="Open Madurai in Google Maps"></a>
                   <div className="absolute inset-0 z-0">
                     <iframe
@@ -346,11 +400,11 @@ const App: React.FC = () => {
               </div>
 
               {/* 3. EDUCATION (Col 2, Row 2) - "Left Side" */}
-              <BentoCard colSpan={2} rowSpan={2} title="Education" id="education" className="relative overflow-hidden scroll-mt-28">
+              <BentoCard colSpan={2} rowSpan={2} title="Education" id="education" className="relative overflow-hidden scroll-mt-28" revealAnimation="fade-left">
                 <div className="space-y-6 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 p-2">
-                  <div className="relative pl-6 border-l-2 border-slate-700 ml-2">
+                  <div className="relative pl-6 border-l-2 border-slate-700 ml-2 stagger-container">
                     {portfolioData.education.map((edu, i) => (
-                      <div key={i} className="mb-8 last:mb-0 relative">
+                      <div key={i} className="mb-8 last:mb-0 relative reveal-on-scroll reveal-fade-up">
                         <div className="absolute -left-[21px] top-1 w-4 h-4 rounded-full bg-slate-900 border-4 border-cyan-500"></div>
                         <div className="flex gap-4 items-start">
                           <div className="bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
@@ -375,10 +429,10 @@ const App: React.FC = () => {
               </BentoCard>
 
               {/* 4. EXPERIENCE (Col 2, Row 2) - "Right Side" */}
-              <BentoCard colSpan={2} rowSpan={2} title="Experience" id="experience" className="relative overflow-hidden scroll-mt-28">
-                <div className="space-y-6 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700">
+              <BentoCard colSpan={2} rowSpan={2} title="Experience" id="experience" className="relative overflow-hidden scroll-mt-28" revealAnimation="fade-right">
+                <div className="space-y-6 h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 stagger-container">
                   {portfolioData.experience.map((job, i) => (
-                    <div key={i} className="flex flex-col h-full">
+                    <div key={i} className="flex flex-col h-full reveal-on-scroll reveal-fade-up">
                       <div className="flex items-center gap-4 mb-4">
                         {job.image && (
                           <div className="w-16 h-16 bg-white rounded-lg p-2 shadow-lg flex-shrink-0">
@@ -413,19 +467,19 @@ const App: React.FC = () => {
 
               {/* 7. SKILLS (Col 2) */}
               {/* 7. SKILLS (Col 2) */}
-              <BentoCard colSpan={2} title="Technical Expertise" id="skills" className="scroll-mt-28">
-                <div className="flex flex-wrap justify-center gap-4">
+              <BentoCard colSpan={2} title="Technical Expertise" id="skills" className="scroll-mt-28" revealAnimation="fade-left">
+                <div className="flex flex-wrap justify-center gap-4 stagger-container">
                   {portfolioData.technicalSkills.programming.concat(portfolioData.technicalSkills.businessApps, portfolioData.technicalSkills.projectManagement).map((skill, i) => (
-                    <SkillBadge key={i} skill={skill} icon={skillIconMap[skill] || <CodeIcon className="w-8 h-8" />} />
+                    <SkillBadge key={i} skill={skill} icon={skillIconMap[skill] || <CodeIcon className="w-8 h-8" />} className="reveal-on-scroll reveal-fade-up" />
                   ))}
                 </div>
               </BentoCard>
 
               {/* 8. CERTIFICATIONS (Col 2) */}
-              <BentoCard colSpan={2} title="Certifications" id="certifications" className="scroll-mt-28">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <BentoCard colSpan={2} title="Certifications" id="certifications" className="scroll-mt-28" revealAnimation="fade-right">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 stagger-container">
                   {portfolioData.certifications.map((cert, i) => (
-                    <TiltCard key={i} className="h-full">
+                    <TiltCard key={i} className="h-full reveal-on-scroll reveal-fade-up">
                       <div className="flex flex-col justify-between h-full p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:bg-slate-800/60 hover:border-cyan-500/30 transition-all group">
                         <div className="flex items-start justify-between mb-3">
                           <div className="p-2 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 rounded-lg text-cyan-400 group-hover:text-cyan-300 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
@@ -446,10 +500,10 @@ const App: React.FC = () => {
               {/* 6. PROJECTS (Col 4 - Wide) */}
               {/* 6. PROJECTS (Col 4 - Wide - Full Page Feel) */}
               {/* 6. PROJECTS (Col 4 - Wide - Full Page Feel) */}
-              <BentoCard colSpan={4} title="" id="projects" className="!border-2 sm:!border-4 !border-cyan-500/50 bg-slate-900/95 relative overflow-hidden !p-0">
+              <BentoCard colSpan={4} title="" id="projects" className="!border-2 sm:!border-4 !border-cyan-500/50 bg-slate-900/95 relative overflow-hidden !p-0" revealAnimation="fade-up">
                 <div className="flex flex-col lg:flex-row h-full min-h-[auto] lg:min-h-[500px]">
                   {/* Left Side: Features & Details */}
-                  <div className="w-full lg:w-1/2 p-4 sm:p-6 md:p-8 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-slate-700/50 bg-slate-900/50 relative">
+                  <div className="w-full lg:w-1/2 p-4 sm:p-6 md:p-8 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-slate-700/50 bg-slate-900/50 relative reveal-on-scroll reveal-fade-left">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
 
                     <div className="mb-6">
@@ -491,7 +545,7 @@ const App: React.FC = () => {
                   </div>
 
                   {/* Right Side: AI Dashboard Image */}
-                  <div className="w-full lg:w-1/2 relative bg-slate-950 flex items-center justify-center p-4 overflow-hidden">
+                  <div className="w-full lg:w-1/2 relative bg-slate-950 flex items-center justify-center p-4 overflow-hidden reveal-on-scroll reveal-fade-right">
                     {/* Background Glow */}
                     <div className="absolute inset-0 bg-cyan-500/5 blur-3xl"></div>
 
@@ -508,9 +562,9 @@ const App: React.FC = () => {
 
 
               {/* 8. CONTACT FORM + GLOBE (Col 4 - Full Width) */}
-              <BentoCard colSpan={4} title="Get In Touch" id="contact" className="relative overflow-hidden">
+              <BentoCard colSpan={4} title="Get In Touch" id="contact" className="relative overflow-hidden" revealAnimation="fade-up">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center h-full">
-                  <div className="z-10">
+                  <div className="z-10 reveal-on-scroll reveal-fade-left">
                     <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
@@ -537,7 +591,7 @@ const App: React.FC = () => {
                       {submitStatus && <p className={`text-xs text-center ${submitStatus.includes('success') ? 'text-green-400' : 'text-red-400'}`}>{submitStatus}</p>}
                     </form>
                   </div>
-                  <div className="relative h-[250px] sm:h-[300px] lg:h-[400px] w-full hidden md:block rounded-2xl overflow-hidden border border-slate-700/30">
+                  <div className="relative h-[250px] sm:h-[300px] lg:h-[400px] w-full hidden md:block rounded-2xl overflow-hidden border border-slate-700/30 reveal-on-scroll reveal-fade-right">
                     <div className="absolute inset-0 bg-cyan-500/5 rounded-full filter blur-[80px] pointer-events-none"></div>
                     <EarthGlobe />
                     <div className="absolute bottom-4 left-4 z-10 bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10">
@@ -547,7 +601,7 @@ const App: React.FC = () => {
                 </div>
               </BentoCard>
 
-            </motion.div>
+            </div>
           </div>
 
           {/* ═══ FOOTER ═══ */}
