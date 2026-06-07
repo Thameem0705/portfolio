@@ -451,41 +451,39 @@ body {
 
 /* ═══════════════ HIGH-PERFORMANCE SCROLL REVEAL ANIMATIONS ═══════════════ */
 
-/* Base style for elements that will reveal on scroll */
+/* Base style for elements that will reveal on scroll (Education heading card) */
 .reveal-on-scroll {
   opacity: 0;
-  will-change: transform, opacity;
-  transition-property: opacity, transform;
-  transition-duration: 800ms;
-  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Animations starting states */
-.reveal-fade-up {
-  transform: translateY(30px);
-}
-
-.reveal-fade-left {
-  transform: translateX(-30px);
-}
-
-.reveal-fade-right {
-  transform: translateX(30px);
+  will-change: opacity;
+  transition: opacity 800ms ease-out;
 }
 
 .reveal-fade-in {
-  transform: none;
+  opacity: 0;
 }
 
 /* Revealed / Active State */
 .reveal-on-scroll.revealed {
   opacity: 1;
-  transform: translate(0, 0);
+}
+
+/* Education timeline items slide-in from left */
+.reveal-education-item {
+  opacity: 0;
+  transform: translateX(-50px);
+  will-change: transform, opacity;
+  transition: opacity 800ms ease-out, transform 800ms ease-out;
+}
+
+.reveal-education-item.revealed {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 /* Respect user preferences: Disable animations when prefers-reduced-motion is active */
 @media (prefers-reduced-motion: reduce) {
-  .reveal-on-scroll {
+  .reveal-on-scroll,
+  .reveal-education-item {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;

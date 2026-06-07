@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface BentoCardProps {
     children: React.ReactNode;
@@ -19,7 +20,7 @@ const BentoCard: React.FC<BentoCardProps> = ({
     colSpan = 1,
     rowSpan = 1,
     id,
-    revealAnimation = 'fade-up'
+    revealAnimation = 'none'
 }) => {
     // Map span props to tailwind classes — responsive: mobile (1 col), md (2 cols), lg (4 cols)
     const colSpanClass = {
@@ -35,13 +36,20 @@ const BentoCard: React.FC<BentoCardProps> = ({
         3: 'md:row-span-3'
     }[rowSpan];
 
-    const revealClasses = revealAnimation !== 'none'
+    const itemVariants = {
+        hidden: { opacity: 0, y: 30, scale: 0.95 },
+        show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 50, damping: 20 } }
+    };
+
+    const isScrollReveal = revealAnimation !== 'none';
+    const revealClasses = isScrollReveal
         ? `reveal-on-scroll reveal-${revealAnimation}`
         : '';
 
     return (
-        <div
+        <motion.div
             id={id}
+            variants={isScrollReveal ? undefined : itemVariants}
             className={`relative group overflow-hidden bg-gray-900/40 backdrop-blur-md border border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-all duration-500 hover:border-white/10 hover:shadow-2xl hover:shadow-cyan-900/10 active:border-white/10 active:shadow-lg ${colSpanClass} ${rowSpanClass} ${revealClasses} ${className} flex flex-col ${id ? 'scroll-mt-20 sm:scroll-mt-28' : ''}`}
         >
             {/* Subtle Gradient Background */}
@@ -59,7 +67,7 @@ const BentoCard: React.FC<BentoCardProps> = ({
                     {children}
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
